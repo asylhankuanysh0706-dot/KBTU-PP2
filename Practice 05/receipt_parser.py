@@ -1,47 +1,40 @@
 import re
 import json
-with open("raw.txt") as f:
-    txt=f.read()
+
+path = r"C:\Users\Quanysh\Desktop\KBTU-PP2\Practice 05\raw.txt"
+
+with open(path, encoding="utf-8") as f:
+    text = f.read()
+
+products_data = re.findall(r"^\d+\.\s+(.+)\n[\s\S]*?([\d ]+,\d{2})(?=\nСтоимость| \d+,\d{2} x|\n\d+\.)", text, re.MULTILINE)
+
+names = []
+prices_str = []
+prices_float = []
+
+for item in products_data:
+    name = item[0].strip()
+    price_raw = item[1].replace(" ", "").replace(",", ".")
+    
+    names.append(name)
+    prices_str.append(item[1].strip())
+    prices_float.append(float(price_raw))
+
+total = sum(prices_float)
 
 
-# 1. Extract all prices from receipt
-# Regex explanation:
-# Стоимость        -> literal word "Стоимость" (used in receipt)
-# \s*\n           -> optional spaces then newline
-# ([\d ]+,\d{2})  -> capture number format like "1 234,56"
-#                     [\d ]+ means digits with possible spaces
-#                     ,\d{2} means comma and two decimals
-
-num = re.findall(r"Стоимость\s*\n([\d ]+,\d{2})", txt)
-
-# Convert extracted price strings to float numbers
-cl_p=[]
-for p in num:# Steps:
-# 1. Remove spaces
-# 2. Replace comma with dot
-# 3. Convert the string to float
-   clean = p.replace(" ", "").replace(",", ".")
-   cl_p.append(float(clean))
-total=sum(cl_p)
+date_match = re.search(r"\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}", text)
 
 
-# Extract product names
-# Regex explanation:
-# ^\d+\.  -> product number like "1."
-# \s*\n   -> spaces followed by newline
-# (.+)    -> captures the product name
-#
-# re.MULTILINE allows ^ to match the start of each line
-name = re.findall(r"^\d+\.\s*\n(.+)", txt, re.MULTILINE)
-date=re.search(r"\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}",txt )# Extract date and time
-Pay_m=re.search(r"Банковская карта|Наличные", txt)# Extract payment method
-# Create structured JSON output
+pay_match = re.search(r"Способ оплаты:\s*(.+)|(Банковская карта|Наличные)", text, re.IGNORECASE)
+pay_method = pay_match.group().strip() if pay_match else "Не указан"
+
 data = {
-    "products": name,           # list of product names
-    "price": num,               # extracted price strings
-    "total amount": total,      # calculated total price
-    "date": date.group(),       # extracted date and time
-    "Pay method": Pay_m.group() # payment method
+    "products": names,
+    "prices": prices_str,
+    "total_amount": round(total, 2),
+    "date": date_match.group() if date_match else None,
+    "payment_method": pay_method
 }
 
 print(json.dumps(data, indent=4, ensure_ascii=False))

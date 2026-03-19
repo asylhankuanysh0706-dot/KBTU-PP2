@@ -1,23 +1,9 @@
 import re
 
-# Task 6
-# Replace all spaces, commas, and dots with a colon (:)
+# Match a string that has 'a', anything, then 'b'
 
-# Regex explanation:
-# [ ,.]  -> square brackets mean "any one of these characters"
-# space  -> matches a space
-# ,      -> matches a comma
-# .      -> matches a dot
-
-# Ask the user to enter text
 text = input("Enter text: ")
 
-# re.sub(pattern, replacement, text)
-# pattern -> what we want to find
-# replacement -> what we replace it with
-# text -> the original string
+matches = re.findall(r"a.*b", text)
 
-result = re.sub(r"[ ,.]", ":", text)
-
-# Print the modified text
-print(result)
+print(matches)
