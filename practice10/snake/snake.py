@@ -18,14 +18,15 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Snake KBTU Edition")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Verdana", 18)
+font_big = pygame.font.SysFont("Verdana", 24, bold=True)
 
 # Цвета
 WHITE = (255, 255, 255)
-GRAY = (200, 200, 200)
+GRAY = (220, 220, 220)
 BLACK = (0, 0, 0)
-GREEN = (0, 180, 0)
-DARK_GREEN = (0, 120, 0)
-RED = (220, 0, 0)
+GREEN = (46, 204, 113)
+DARK_GREEN = (39, 174, 96)
+RED = (231, 76, 60)
 
 # -----------------------------
 # ПЕРЕМЕННЫЕ ИГРЫ
@@ -35,7 +36,7 @@ direction = (1, 0)
 next_direction = (1, 0)
 score = 0
 level = 1
-speed = 5 # Начальная скорость
+speed = 5
 walls = set()
 food = None
 
@@ -46,87 +47,82 @@ food = None
 def load_level(level_number):
     """Загрузка стен из текстового файла"""
     global walls
-    walls = set()
+    walls.clear() # Очищаем старые стены
     filename = f"level{level_number}.txt"
     try:
         with open(filename, "r") as file:
-            lines = file.readlines()
-            for y, line in enumerate(lines):
+            for y, line in enumerate(file):
                 for x, char in enumerate(line.strip()):
                     if char == "#":
                         walls.add((x, y))
     except FileNotFoundError:
-        # Если уровни кончились, просто оставляем пустую карту или выходим
-        print(f"Level {level_number} file not found. Victory!")
+        # Если уровни закончились
+        show_message("VICTORY! YOU FINISHED ALL LEVELS", GREEN)
         pygame.quit()
         sys.exit()
 
 def generate_food():
-    """Генерация еды так, чтобы она не попала на змейку или стену"""
+    """Генерация еды без попадания в змейку или стену"""
     while True:
         pos = (random.randint(0, GRID_W - 1), random.randint(0, GRID_H - 1))
         if pos not in snake and pos not in walls:
             return pos
 
-def draw_cell(pos, color):
-    """Отрисовка одного квадратика (клетки)"""
-    x, y = pos
-    pygame.draw.rect(screen, color, (x * CELL, y * CELL, CELL, CELL))
+def show_message(text, color):
+    """Функция для вывода сообщений по центру экрана"""
+    screen.fill(WHITE)
+    msg = font_big.render(text, True, color)
+    rect = msg.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    screen.blit(msg, rect)
+    pygame.display.update()
+    pygame.time.delay(2000) # Пауза на 2 секунды
 
-def draw_background():
-    """Шахматный фон"""
-    for y in range(GRID_H):
-        for x in range(GRID_W):
-            color = WHITE if (x + y) % 2 == 0 else GRAY
-            pygame.draw.rect(screen, color, (x * CELL, y * CELL, CELL, CELL))
+def next_level():
+    """Переход на новый уровень с уведомлением"""
+    global level, speed, food, snake, direction, next_direction
+    
+    show_message(f"NEXT LEVEL: {level + 1}", BLACK)
+    
+    level += 1
+    speed += 2 # Увеличиваем скорость
+    load_level(level)
+    
+    # Спавним змейку в центре (безопасная зона)
+    safe_x, safe_y = GRID_W // 2, GRID_H // 2
+    snake = [(safe_x, safe_y), (safe_x-1, safe_y), (safe_x-2, safe_y)]
+    direction = (1, 0)
+    next_direction = (1, 0)
+    food = generate_food()
+
+def draw_cell(pos, color):
+    x, y = pos
+    pygame.draw.rect(screen, color, (x * CELL, y * CELL, CELL - 1, CELL - 1))
 
 def draw_game():
-    """Отрисовка всех объектов на экране"""
-    draw_background()
+    screen.fill(WHITE)
+    # Рисуем шахматный фон
+    for y in range(GRID_H):
+        for x in range(GRID_W):
+            if (x + y) % 2 != 0:
+                pygame.draw.rect(screen, GRAY, (x * CELL, y * CELL, CELL, CELL))
+    
     for wall in walls: draw_cell(wall, BLACK) # Стены
     for i, part in enumerate(snake): # Змейка
         draw_cell(part, GREEN if i == 0 else DARK_GREEN)
     draw_cell(food, RED) # Еда
     
-    # Счетчики
-    s_text = font.render(f"Score: {score}", True, BLACK)
-    l_text = font.render(f"Level: {level}", True, BLACK)
-    screen.blit(s_text, (10, 10))
-    screen.blit(l_text, (WIDTH - 100, 10))
+    # Текст статистики
+    score_txt = font.render(f"Score: {score}", True, BLACK)
+    level_txt = font.render(f"Lvl: {level}", True, BLACK)
+    screen.blit(score_txt, (10, 10))
+    screen.blit(level_txt, (WIDTH - 80, 10))
     pygame.display.update()
 
-def game_over():
-    """Экран проигрыша"""
-    screen.fill(WHITE)
-    t1 = font.render("GAME OVER", True, RED)
-    t2 = font.render(f"Final Score: {score}", True, BLACK)
-    screen.blit(t1, (WIDTH//2 - 50, HEIGHT//2 - 20))
-    screen.blit(t2, (WIDTH//2 - 50, HEIGHT//2 + 10))
-    pygame.display.update()
-    pygame.time.delay(2000)
-    pygame.quit()
-    sys.exit()
-
-def next_level():
-    """Переход на новый уровень"""
-    global level, speed, food, snake, direction, next_direction
-    level += 1
-    speed += 2 # Увеличиваем сложность
-    load_level(level)
-    
-    # Сбрасываем позицию змейки в безопасное место, чтобы не заспавниться в стене
-    snake = [(3, 2), (2, 2), (1, 2)]
-    direction = (1, 0)
-    next_direction = (1, 0)
-    food = generate_food()
-
-# Подготовка первого уровня
+# --- СТАРТ ИГРЫ ---
 load_level(level)
 food = generate_food()
 
-# -----------------------------
-# ИГРОВОЙ ЦИКЛ
-# -----------------------------
+# --- ОСНОВНОЙ ЦИКЛ ---
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -146,19 +142,17 @@ while True:
     head_x, head_y = snake[0]
     new_head = (head_x + direction[0], head_y + direction[1])
 
-    # 1. Проверка столкновения со стенами
-    if new_head in walls: game_over()
-
-    # 2. Проверка выхода за границы экрана
-    if not (0 <= new_head[0] < GRID_W and 0 <= new_head[1] < GRID_H):
-        game_over()
-
-    # 3. Проверка столкновения с самим собой
-    if new_head in snake: game_over()
+    # Проверки коллизий
+    if (new_head in walls or 
+        new_head in snake or 
+        not (0 <= new_head[0] < GRID_W and 0 <= new_head[1] < GRID_H)):
+        show_message("GAME OVER", RED)
+        pygame.quit()
+        sys.exit()
 
     snake.insert(0, new_head)
 
-    # 4. Проверка поедания еды
+    # Проверка еды
     if new_head == food:
         score += 1
         if score % 3 == 0: # Каждые 3 очка — новый уровень
@@ -166,7 +160,7 @@ while True:
         else:
             food = generate_food()
     else:
-        snake.pop() # Убираем хвост, если ничего не съели
+        snake.pop()
 
     draw_game()
     clock.tick(speed)
